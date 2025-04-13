@@ -9,7 +9,27 @@ PluralKit has a Discord server for support, feedback, and discussion: https://di
 See [CONFIGURATION.md](./CONFIGURATION.md).
 
 # Running
-See [RUNNING.md](./RUNNING.md).
+In production, we run PluralKit using Kubernetes (soon). The configuration can be found in the infra repo.
+
+For self-hosting, it's simpler to use Docker, with the provided [docker-compose](./docker-compose.yml) file.
+
+Create a `.env` file with the Discord client ID and bot token:
+```
+CLIENT_ID=198622483471925248
+BOT_TOKEN=YOUR_TOKEN_HERE
+```
+
+If you want to use `pk;admin` commands (to raise member limits  and such), set `ADMIN_ROLE` to a Discord role ID:
+
+```
+ADMIN_ROLE=682632767057428509
+```
+
+Run `docker compose build`, then `docker compose up -d`.
+
+To view logs, use `docker compose logs`.
+
+Postgres data is stored in a `pluralkit_data` [Docker volume](https://docs.docker.com/engine/storage/volumes/).
 
 # Upgrading database from legacy version
 If you have an instance of the Python version of the bot (from the `legacy` branch), you may need to take extra database migration steps.
