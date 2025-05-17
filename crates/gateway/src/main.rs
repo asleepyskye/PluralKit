@@ -29,17 +29,7 @@ libpk::main!("gateway");
 async fn real_main() -> anyhow::Result<()> {
     let redis = libpk::db::init_redis().await?;
 
-    let runtime_config = Arc::new(
-        RuntimeConfig::new(
-            redis.clone(),
-            format!(
-                "{}:{}",
-                libpk::config.runtime_config_key.as_ref().unwrap(),
-                cluster_config().node_id
-            ),
-        )
-        .await?,
-    );
+    let runtime_config = Arc::new(RuntimeConfig::new(redis.clone(), "".to_string()).await?);
 
     // hacky, but needed for selfhost for now
     if let Some(target) = libpk::config
@@ -54,7 +44,13 @@ async fn real_main() -> anyhow::Result<()> {
             .await?;
     }
 
-    let shard_state = discord::shard_state::new(redis.clone());
+    let manager_url = libpk::config
+        .manager_url
+        .as_ref()
+        .expect("missing manager url")
+        .clone();
+
+    let shard_state = discord::shard_state::new(manager_url, cluster_config().node_id);
     let cache = Arc::new(discord::cache::new());
     let awaiter = Arc::new(EventAwaiter::new());
     tokio::spawn({

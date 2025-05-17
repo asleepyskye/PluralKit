@@ -183,6 +183,15 @@ pub async fn run_server(cache: Arc<DiscordCache>, runtime_config: Arc<RuntimeCon
             status_code(StatusCode::FOUND, to_string(&stats).unwrap())
         }))
 
+        .route("/up", get(|State(cache): State<Arc<DiscordCache>>| async move {
+            let cluster = cluster_config();
+            let has_been_up = cache.2.read().await.len() as u32 == if cluster.total_shards > 16 {16} else {cluster.total_shards};
+            if has_been_up{
+                return status_code(StatusCode::OK, "".to_string());
+            }
+            return status_code(StatusCode::SERVICE_UNAVAILABLE, "".to_string());
+        }))
+
         .route("/runtime_config", get(|| async move {
             status_code(StatusCode::FOUND, to_string(&runtime_config.get_all().await).unwrap())
         }))

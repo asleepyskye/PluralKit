@@ -14,19 +14,30 @@ struct ClusterStats {
 }
 
 pub async fn discord_state(State(ctx): State<ApiContext>) -> Json<Value> {
-    let mut shard_status = ctx
-        .redis
-        .hgetall::<HashMap<String, String>, &str>("pluralkit:shardstatus")
-        .await
-        .unwrap()
-        .values()
-        .map(|v| serde_json::from_str(v).expect("could not deserialize shard"))
-        .collect::<Vec<ShardState>>();
+    let client = ClientBuilder::new()
+        .connect_timeout(Duration::from_secs(3))
+        .timeout(Duration::from_secs(3))
+        .build()
+        .expect("error making client");
 
-    shard_status.sort_by(|a, b| b.shard_id.cmp(&a.shard_id));
+    let manager_resp = client
+        .get(format!("http://{}/status", ctx.manager_url))
+        .send()
+        .await
+        .expect("failed to request manager");
+
+    let shard_status = manager_resp
+        .json::<Value>()
+        .await
+        .expect("failed to deserialize manager response as json");
+
+    let Value::Array(mut shard_vec) = shard_status else {
+        panic!("manager response is not an array")
+    };
+    shard_vec.reverse();
 
     Json(json!({
-        "shards": shard_status,
+        "shards": shard_vec,
     }))
 }
 

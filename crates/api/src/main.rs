@@ -26,6 +26,7 @@ pub struct ApiContext {
 
     rproxy_uri: String,
     rproxy_client: Client<HttpConnector, Body>,
+    manager_url: String,
 }
 
 async fn rproxy(
@@ -146,12 +147,19 @@ async fn real_main() -> anyhow::Result<()> {
     let rproxy_client = hyper_util::client::legacy::Client::<(), ()>::builder(TokioExecutor::new())
         .build(HttpConnector::new());
 
+    let manager_url = libpk::config
+        .manager_url
+        .as_ref()
+        .expect("missing manager url")
+        .clone();
+
     let ctx = ApiContext {
         db,
         redis,
 
         rproxy_uri: rproxy_uri[..rproxy_uri.len() - 1].to_string(),
         rproxy_client,
+        manager_url: manager_url,
     };
 
     let app = router(ctx);
