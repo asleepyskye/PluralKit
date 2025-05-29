@@ -13,12 +13,16 @@ use super::gateway::cluster_config;
 pub struct ShardStateManager {
     redis: RedisPool,
     shards: RwLock<HashMap<u32, ShardState>>,
+    manager_url: Option<String>,
+    http_client: reqwest::Client,
 }
 
 pub fn new(redis: RedisPool) -> ShardStateManager {
     ShardStateManager {
         redis: redis,
         shards: RwLock::new(HashMap::new()),
+        manager_url: libpk::config.manager_url.clone(),
+        http_client: reqwest::Client::new(),
     }
 }
 
@@ -46,6 +50,13 @@ impl ShardStateManager {
                 ),
             )
             .await?;
+        if let Some(manager_url_str) = &self.manager_url {
+            self.http_client
+                .patch(format!("http://{}/shard/status", manager_url_str))
+                .body(serde_json::to_string(&state).expect("could not serialize shard"))
+                .send()
+                .await?;
+        }
         Ok(())
     }
 

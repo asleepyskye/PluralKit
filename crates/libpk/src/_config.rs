@@ -128,6 +128,9 @@ pub struct PKConfig {
 
     #[serde(default)]
     pub sentry_url: Option<String>,
+
+    #[serde(default)]
+    pub manager_url: Option<String>,
 }
 
 impl PKConfig {
