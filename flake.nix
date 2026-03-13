@@ -77,6 +77,14 @@
             path = ./.;
             export = false;
           };
+          # nci.crates."gateway" = {
+          #   depsDrvConfig.mkDerivation = {
+          #     nativeBuildInputs = [ pkgs.protobuf ];
+          #   };
+          #   drvConfig.mkDerivation = {
+          #     nativeBuildInputs = [ pkgs.protobuf ];
+          #   };
+          # };
 
           packages =
             let
@@ -91,19 +99,6 @@
                 "scheduled_tasks"
               ];
               binaries = lib.genAttrs services (name: rustOutputs.${name}.packages.release);
-
-              nci.crates = lib.genAttrs services (name: {
-                depsDrvConfig.mkDerivation = {
-                  nativeBuildInputs = [ pkgs.protobuf ];
-                  preConfigure = ''
-                    find /build/nix-vendor -name Cargo.toml -exec sed -i '/\[lints\]/d; /workspace = true/d' {} + || true
-                  '';
-                };
-                drvConfig.mkDerivation = {
-                  nativeBuildInputs = [ pkgs.protobuf ];
-                };
-              });
-
               dockerImages = lib.genAttrs services (
                 name:
                 pkgs.dockerTools.streamLayeredImage {
