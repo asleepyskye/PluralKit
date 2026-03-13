@@ -91,15 +91,6 @@
                 "scheduled_tasks"
               ];
               binaries = lib.genAttrs services (name: rustOutputs.${name}.packages.release);
-              nci.crates = lib.genAttrs services (name: {
-                depsDrvConfig.mkDerivation = {
-                  nativeBuildInputs = [ pkgs.protobuf ];
-                };
-                drvConfig.mkDerivation = {
-                  nativeBuildInputs = [ pkgs.protobuf ];
-                  RUSTFLAGS = "-C link-arg=-s --remap-path-prefix /nix/store=/nix-store-hidden";
-                };
-              });
               dockerImages = lib.genAttrs services (
                 name:
                 pkgs.dockerTools.streamLayeredImage {

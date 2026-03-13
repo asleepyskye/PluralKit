@@ -36,3 +36,6 @@ twilight-http = { git = "https://github.com/pluralkit/twilight", branch = "plura
 # twilight-util = { path = "../twilight/twilight-util", features = ["permission-calculator"] }
 # twilight-model = { path = "../twilight/twilight-model" }
 # twilight-http = { path = "../twilight/twilight-http", default-features = false, features = ["rustls-aws_lc_rs", "rustls-native-roots"] }
+
+[profile.release]
+strip = true
