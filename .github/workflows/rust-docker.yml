@@ -1,11 +1,11 @@
 name: Build and push Rust service Docker images
 on:
-  workflow_dispatch:
   push:
     paths:
     - 'crates/**'
     - '.dockerignore'
     - '.github/workflows/rust.yml'
+    - '.github/workflows/rust-docker.yml'
     - 'ci/Dockerfile.rust'
     - 'ci/rust-docker-target.sh'
     - 'Cargo.toml'
