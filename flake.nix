@@ -97,7 +97,7 @@
                 };
                 drvConfig.mkDerivation = {
                   nativeBuildInputs = [ pkgs.protobuf ];
-                  RUSTFLAGS = "-C link-arg=-s";
+                  RUSTFLAGS = "-C link-arg=-s --remap-path-prefix /nix/store=/nix-store-hidden";
                 };
               });
               dockerImages = lib.genAttrs services (
