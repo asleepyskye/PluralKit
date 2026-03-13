@@ -77,14 +77,6 @@
             path = ./.;
             export = false;
           };
-          # nci.crates."gateway" = {
-          #   depsDrvConfig.mkDerivation = {
-          #     nativeBuildInputs = [ pkgs.protobuf ];
-          #   };
-          #   drvConfig.mkDerivation = {
-          #     nativeBuildInputs = [ pkgs.protobuf ];
-          #   };
-          # };
 
           packages =
             let
@@ -99,6 +91,15 @@
                 "scheduled_tasks"
               ];
               binaries = lib.genAttrs services (name: rustOutputs.${name}.packages.release);
+              nci.crates = lib.genAttrs servicesList (name: {
+                depsDrvConfig.mkDerivation = {
+                  nativeBuildInputs = [ pkgs.protobuf ];
+                };
+                drvConfig.mkDerivation = {
+                  nativeBuildInputs = [ pkgs.protobuf ];
+                  RUSTFLAGS = "-C link-arg=-s";
+                };
+              });
               dockerImages = lib.genAttrs services (
                 name:
                 pkgs.dockerTools.streamLayeredImage {
