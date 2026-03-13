@@ -10,6 +10,8 @@ on:
     - 'ci/rust-docker-target.sh'
     - 'Cargo.toml'
     - 'Cargo.lock'
+    - 'flake.nix'
+    - 'flake.lock'
 
 jobs:
   build:
