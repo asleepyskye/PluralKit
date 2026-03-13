@@ -91,7 +91,7 @@
                 "scheduled_tasks"
               ];
               binaries = lib.genAttrs services (name: rustOutputs.${name}.packages.release);
-              nci.crates = lib.genAttrs servicesList (name: {
+              nci.crates = lib.genAttrs services (name: {
                 depsDrvConfig.mkDerivation = {
                   nativeBuildInputs = [ pkgs.protobuf ];
                 };
