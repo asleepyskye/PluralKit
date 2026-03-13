@@ -1,5 +1,6 @@
 name: Build and push Rust service Docker images
 on:
+  workflow_dispatch:
   push:
     paths:
     - 'crates/**'
