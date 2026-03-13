@@ -38,7 +38,7 @@ jobs:
       - run: ./result | docker load
       - if: github.event_name != 'pull_request'
         run: |
-          docker tag pluralkit-gateway:latest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          docker tag pluralkit-gateway:latest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker tag pluralkit-gateway:latest ghcr.io/asleepyskye/pluralkit-gateway:latest
+          docker push ghcr.io/asleepyskye/pluralkit-gateway:latest
+          docker tag pluralkit-gateway:latest ghcr.io/asleepyskye/pluralkit-gateway:${{ github.sha }}
+          docker push ghcr.io/asleepyskye/pluralkit-gateway:${{ github.sha }}
