@@ -37,12 +37,14 @@ jobs:
       - run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          summarize: false
       - uses: cachix/cachix-action@v15
         with:
           name: asleepyskye-pluralkit-testing
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
-      - if: github.event_name != 'pull_request' && ${{ !env.ACT }}
+      - if: ${{ !env.ACT }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -51,13 +53,19 @@ jobs:
 
       - run: nix build .#docker-${{ matrix.service }}
       - run: ./result | docker load
-      - if: github.event_name != 'pull_request'
-        run: |
-          IMAGE_NAME="${{ github.repository_owner }}/pluralkit-${{ matrix.service }}"
+      - run: |
+          IMAGE_NAME="${{ github.repository_owner }}/${{ matrix.service }}"
           IMAGE_ID=$(echo "ghcr.io/$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
+          TAG="${{ github.sha }}"
+          BRANCH="${{ github.ref_name }}"
 
-          docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:latest
-          docker push $IMAGE_ID:latest
+          docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:$TAG
+          docker push $IMAGE_ID:$TAG
 
-          docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:${{ github.sha }}
-          docker push $IMAGE_ID:${{ github.sha }}
+          docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:$BRANCH
+          docker push $IMAGE_ID:BRANCH
+
+          if ["$BRANCH" == "main"]; then
+            docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:latest
+            docker push $IMAGE_ID:latest
+          fi
