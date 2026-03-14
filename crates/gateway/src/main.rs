@@ -26,6 +26,7 @@ const RUNTIME_CONFIG_KEY_EVENT_TARGET: &'static str = "event_target";
 
 #[libpk::main]
 async fn main() -> anyhow::Result<()> {
+    info!("starting gateway...");
     let redis = libpk::db::init_redis().await?;
 
     let runtime_config = Arc::new(
