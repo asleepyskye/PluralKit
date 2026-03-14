@@ -29,7 +29,6 @@ jobs:
           - migrate
           - dispatch
           - avatars
-          - avatar_cleanup
           - scheduled_tasks
           - gdpr_worker
     
@@ -56,6 +55,6 @@ jobs:
 
           docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:latest
           docker push $IMAGE_ID:latest
-          
+
           docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:${{ github.sha }}
           docker push $IMAGE_ID:${{ github.sha }}
