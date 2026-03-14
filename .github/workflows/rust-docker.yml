@@ -63,7 +63,7 @@ jobs:
           docker push $IMAGE_ID:$TAG
 
           docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:$BRANCH
-          docker push $IMAGE_ID:BRANCH
+          docker push $IMAGE_ID:$BRANCH
 
           if ["$BRANCH" == "main"]; then
             docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:latest
