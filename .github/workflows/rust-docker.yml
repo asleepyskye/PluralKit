@@ -14,20 +14,8 @@ on:
     - 'flake.lock'
 
 jobs:
-  cache:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: cachix/cachix-action@v15
-        with:
-          name: asleepyskye-pluralkit-testing
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - run: nix build .#docker-gateway
-
   build:
     name: 'rust docker build'
-    needs: cache
     runs-on: ubuntu-latest
     permissions:
       contents: read
