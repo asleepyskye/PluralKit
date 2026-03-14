@@ -20,6 +20,19 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: 
+          - gateway
+          - api
+          - migrate
+          - dispatch
+          - avatars
+          - avatar_cleanup
+          - scheduled_tasks
+          - gdpr_worker
+    
     #if: github.repository == 'PluralKit/PluralKit'
     steps:
       - run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
@@ -34,11 +47,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: nix build .#docker-gateway
+      - run: nix build .#docker-${{ matrix.service }}
       - run: ./result | docker load
       - if: github.event_name != 'pull_request'
         run: |
-          docker tag pluralkit-gateway:latest ghcr.io/asleepyskye/pluralkit-gateway:latest
-          docker push ghcr.io/asleepyskye/pluralkit-gateway:latest
-          docker tag pluralkit-gateway:latest ghcr.io/asleepyskye/pluralkit-gateway:${{ github.sha }}
-          docker push ghcr.io/asleepyskye/pluralkit-gateway:${{ github.sha }}
+          IMAGE_NAME="${{ github.repository_owner }}/pluralkit-${{ matrix.service }}"
+          IMAGE_ID=$(echo "ghcr.io/$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
+
+          docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:latest
+          docker push $IMAGE_ID:latest
+          
+          docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:${{ github.sha }}
+          docker push $IMAGE_ID:${{ github.sha }}
