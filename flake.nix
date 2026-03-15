@@ -86,7 +86,7 @@
                 avatars = { };
                 dispatch = { };
                 gateway = { };
-                gdpr-worker = { };
+                gdpr_worker = { };
                 migrate = { };
                 scheduled_tasks = {
                   addlPkgs = [ pkgs.wal-g ];
