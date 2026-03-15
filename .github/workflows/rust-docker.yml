@@ -20,17 +20,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        service: 
-          - gateway
-          - api
-          - migrate
-          - dispatch
-          - avatars
-          - scheduled_tasks
-          - gdpr_worker
     
     #if: github.repository == 'PluralKit/PluralKit'
     steps:
@@ -51,21 +40,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: nix build .#docker-${{ matrix.service }}
-      - run: ./result | docker load
       - run: |
-          IMAGE_NAME="${{ github.repository_owner }}/${{ matrix.service }}"
-          IMAGE_ID=$(echo "ghcr.io/$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
-          TAG="${{ github.sha }}"
-          BRANCH="${{ github.ref_name }}"
+          SERVICES="gateway api migrate dispatch avatars avatar_cleanup scheduled_tasks gdpr_worker"
+          for SERVICE in $SERVICES; do
+            nix build .#docker-$SERVICE
+            ./result | docker load
 
-          docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:$TAG
-          docker push $IMAGE_ID:$TAG
+            IMAGE_NAME="${{ github.repository_owner }}/$SERVICE"
+            IMAGE_ID=$(echo "ghcr.io/$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
+            TAG="${{ github.sha }}"
+            BRANCH="${{ github.ref_name }}"
 
-          docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:$BRANCH
-          docker push $IMAGE_ID:$BRANCH
+            docker tag pluralkit-$SERVICE:latest $IMAGE_ID:$TAG
+            docker push $IMAGE_ID:$TAG
 
-          if ["$BRANCH" == "main"]; then
-            docker tag pluralkit-${{ matrix.service }}:latest $IMAGE_ID:latest
-            docker push $IMAGE_ID:latest
-          fi
+            docker tag pluralkit-$SERVICE:latest $IMAGE_ID:$BRANCH
+            docker push $IMAGE_ID:$BRANCH
+
+            if ["$BRANCH" == "main"]; then
+              docker tag pluralkit-$SERVICE:latest $IMAGE_ID:latest
+              docker push $IMAGE_ID:latest
+            fi
+          done
+          
