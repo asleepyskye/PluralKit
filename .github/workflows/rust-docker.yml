@@ -41,7 +41,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - run: |
-          SERVICES="gateway api migrate dispatch avatars avatar_cleanup scheduled_tasks gdpr_worker"
+          SERVICES="gateway api migrate dispatch avatars scheduled_tasks gdpr_worker"
           for SERVICE in $SERVICES; do
             nix build .#docker-$SERVICE
             ./result | docker load
