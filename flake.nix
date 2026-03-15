@@ -80,29 +80,33 @@
 
           packages =
             let
-              services = [
-                "api"
-                "app-commands"
-                "avatars"
-                "dispatch"
-                "gateway"
-                "gdpr_worker"
-                "migrate"
-                "scheduled_tasks"
-              ];
-              binaries = lib.genAttrs services (name: rustOutputs.${name}.packages.release);
-              dockerImages = lib.genAttrs services (
-                name:
+              services = {
+                api = { };
+                app-commands = { };
+                avatars = { };
+                dispatch = { };
+                gateway = { };
+                gdpr-worker = { };
+                migrate = { };
+                scheduled_tasks = {
+                  addlPkgs = [ pkgs.wal-g ];
+                };
+              };
+
+              binaries = lib.mapAttrs (name: conf: rustOutputs.${name}.packages.release) services;
+              dockerImages = lib.mapAttrs (
+                name: conf:
                 pkgs.dockerTools.streamLayeredImage {
                   name = "pluralkit-${name}";
                   tag = "latest";
                   contents = [
                     binaries.${name}
                     pkgs.cacert
-                  ];
+                  ]
+                  ++ (conf.addlPkgs or [ ]);
                   config.Cmd = [ "${binaries.${name}}/bin/${name}" ];
                 }
-              );
+              ) services;
               renamedImages = lib.mapAttrs' (name: value: lib.nameValuePair "docker-${name}" value) dockerImages;
             in
             binaries // renamedImages;
