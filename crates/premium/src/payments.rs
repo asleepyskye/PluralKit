@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::ApiContext;
+use crate::{ApiContext, web::System};
 use askama::Template;
 use axum::{
     Json,
@@ -9,6 +9,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use pk_macros::api_endpoint;
+use pluralkit_models::PKSystem;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::Postgres;
 use subtle::ConstantTimeEq;
@@ -105,13 +106,6 @@ impl SubscriptionInfo {
 
     pub fn status(&self) -> String {
         if let Some(stripe) = &self.stripe {
-            if stripe.cancel_at_period_end {
-                if let Some(end) = stripe.current_period_end {
-                    if let Some(dt) = chrono::DateTime::from_timestamp(end, 0) {
-                        return format!("expires {}", dt.format("%Y-%m-%d"));
-                    }
-                }
-            }
             stripe.status.to_lowercase()
         } else if let Some(db) = &self.db {
             db.status.clone().unwrap_or_else(|| "unknown".to_string())
@@ -139,23 +133,19 @@ impl SubscriptionInfo {
         "-".to_string()
     }
 
-    pub fn system_id_display(&self) -> String {
+    pub fn system(&self) -> Option<crate::web::System> {
         if let Some(db) = &self.db {
-            if let Some(hid) = &db.system_hid {
-                if let Some(name) = &db.system_name {
-                    // todo(premium): this is terrible
-                    let escaped_name = html_escape(name);
-                    return format!("{} (<code>{}</code>)", escaped_name, hid);
-                }
-                return format!("<code>{}</code>", hid);
+            if let Some(hid) = &db.system_hid
+                && let Some(name) = &db.system_name
+            {
+                return Some(System {
+                    hid: hid.to_string(),
+                    name: name.to_string(),
+                });
             }
-            if db.system_id.is_some() {
-                return "unknown system (contact us at billing@pluralkit.me to fix this)"
-                    .to_string();
-            }
-            return "not linked".to_string();
+            return None;
         }
-        "not linked".to_string()
+        None
         // todo(premium): support linking/unlinking
     }
 
@@ -275,8 +265,8 @@ pub async fn create_checkout_url(email: &str, system_id: i32) -> anyhow::Result<
     let config = libpk::config.premium();
     let client = stripe::Client::new(&config.stripe_secret_key);
 
-    let success_url = format!("{}/", config.base_url);
-    let cancel_url = format!("{}/", config.base_url);
+    let success_url = format!("{}/manage", config.base_url);
+    let cancel_url = format!("{}/manage", config.base_url);
     let system_id_str = system_id.to_string();
 
     // Use raw reqwest to set the managed payments preview header,
@@ -754,14 +744,10 @@ pub async fn cancel_page(
             .into_response();
     };
 
-    axum::response::Html(
-        crate::web::Cancel {
-            csrf_token: session.csrf_token,
-            subscription,
-        }
-        .render()
-        .unwrap(),
-    )
+    axum::Json(crate::web::Cancel {
+        csrf_token: session.csrf_token,
+        subscription,
+    })
     .into_response()
 }
 

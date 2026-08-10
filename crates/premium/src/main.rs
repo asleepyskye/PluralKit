@@ -37,18 +37,28 @@ async fn home_handler(
         }
     };
 
-    Html(
-        web::Index {
-            base_url: libpk::config.premium().base_url.clone(),
-            session: Some(session),
-            show_login_form: false,
-            message: None,
-            subscriptions,
-        }
-        .render()
-        .unwrap(),
-    )
+    axum::Json(web::Index {
+        base_url: libpk::config.premium().base_url.clone(),
+        session: Some(session),
+        show_login_form: false,
+        message: None,
+        subscriptions,
+    })
     .into_response()
+}
+
+async fn subscriptions_handler(
+    State(ctx): State<ApiContext>,
+    Extension(session): Extension<auth::AuthState>,
+) -> Response {
+    let subscriptions = match payments::fetch_subscriptions_for_email(&ctx, &session.email).await {
+        Ok(subs) => subs.iter().map(web::Subscription::from).collect(),
+        Err(err) => {
+            tracing::error!(?err, "failed to fetch subscriptions for {}", session.email);
+            vec![]
+        }
+    };
+    axum::Json(subscriptions).into_response()
 }
 
 // this function is manually formatted for easier legibility of route_services
@@ -58,7 +68,7 @@ fn router(ctx: ApiContext) -> Router {
     Router::new()
         .route("/", get(home_handler))
 
-        .route("/login/{token}", get(|| async {
+        .route("/login/exchange", get(|| async {
             "handled in auth middleware"
         }))
         .route("/login", post(|| async {
@@ -67,6 +77,10 @@ fn router(ctx: ApiContext) -> Router {
         .route("/logout", post(|| async {
             "handled in auth middleware"
         }))
+        .route("/session", post(|| async {
+            "handled in auth middleware"
+        }))
+        .route("/subscriptions", get(subscriptions_handler))
         .route("/cancel", get(payments::cancel_page).post(payments::cancel))
         .route("/validate-token", post(system::validate_token))
         .route("/checkout", post(payments::checkout))

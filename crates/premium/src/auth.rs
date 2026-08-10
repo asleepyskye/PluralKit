@@ -14,6 +14,7 @@ use fred::{
 };
 use rand::{Rng, distributions::Alphanumeric};
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use crate::web::{message, render};
 
@@ -179,6 +180,22 @@ pub async fn middleware(
                 response
             }
         }
+        "/session" => {
+            if let Some(ref session) = session {
+                return render!(crate::web::SessionInfo {
+                    email: session.email.clone(),
+                    csrf_token: session.csrf_token.clone()
+                });
+            } else {
+                return render!(crate::web::Index {
+                    base_url: libpk::config.premium().base_url.clone(),
+                    session: None,
+                    show_login_form: true,
+                    message: None,
+                    subscriptions: vec![],
+                });
+            }
+        }
         "/login" => {
             if let Some(ref session) = session {
                 // no session here because that shows the "you're logged in as" component
@@ -189,21 +206,18 @@ pub async fn middleware(
                     Ok(b) => b,
                     Err(err) => fail_html!(?err, "failed to read request body"),
                 };
-                let form: std::collections::HashMap<String, String> =
-                    match serde_urlencoded::from_bytes(&body) {
-                        Ok(f) => f,
-                        Err(err) => fail_html!(?err, "failed to parse form data"),
-                    };
-                let Some(email) = form.get("email") else {
-                    return render!(crate::web::Index {
-                        base_url: libpk::config.premium().base_url.clone(),
-                        session: None,
-                        show_login_form: true,
-                        message: Some("email field is required".to_string()),
-                        subscriptions: vec![],
-                    });
+
+                #[derive(serde::Deserialize)]
+                struct LoginRequest {
+                    email: String,
+                }
+
+                let req: LoginRequest = match serde_json::from_slice(&body) {
+                    Ok(r) => r,
+                    Err(err) => fail_html!(?err, "failed to parse json body"),
                 };
-                let email = email.trim().to_lowercase();
+
+                let email = req.email.trim().to_lowercase();
                 if email.is_empty() {
                     return render!(crate::web::Index {
                         base_url: libpk::config.premium().base_url.clone(),
@@ -231,6 +245,11 @@ pub async fn middleware(
                     fail_html!(?err, "failed to store login token in redis");
                 }
 
+                #[cfg(debug_assertions)]
+                {
+                    info!("token for user {}: {}", email, token);
+                }
+
                 if let Err(err) = crate::mailer::login_token(email, token).await {
                     fail_html!(?err, "failed to send login email");
                 }
@@ -241,16 +260,28 @@ pub async fn middleware(
                 ));
             }
         }
-        "/login/{token}" => {
+        "/login/exchange" => {
             if let Some(ref session) = session {
                 // no session here because that shows the "you're logged in as" component
                 let response = render!(message("you are already logged in! go back home and log out if you need to log in to a different account.".to_string(), None));
                 return refresh_session_cookie(session, response);
             }
 
-            let path = request.uri().path();
-            let token = path.strip_prefix("/login/").unwrap_or("");
-            if token.is_empty() {
+            let body = match axum::body::to_bytes(request.into_body(), 1024 * 16).await {
+                Ok(b) => b,
+                Err(err) => fail_html!(?err, "failed to read request body"),
+            };
+
+            #[derive(serde::Deserialize)]
+            struct ExchangeRequest {
+                token: String,
+            }
+            let req: ExchangeRequest = match serde_json::from_slice(&body) {
+                Ok(r) => r,
+                Err(err) => fail_html!(?err, "failed to parse json body"),
+            };
+
+            if req.token.is_empty() {
                 return render!(crate::web::Index {
                     base_url: libpk::config.premium().base_url.clone(),
                     session: None,
@@ -260,7 +291,7 @@ pub async fn middleware(
                 });
             }
 
-            let token_key = format!("premium:login_token:{}", token);
+            let token_key = format!("premium:login_token:{}", req.token);
             let email: Option<String> = match ctx.redis.get(&token_key).await {
                 Ok(e) => e,
                 Err(err) => fail_html!(?err, "failed to fetch login token from redis"),
@@ -287,15 +318,10 @@ pub async fn middleware(
                 fail_html!(?err, "failed to save session to redis");
             }
 
-            let cookie_value = format!(
-                "pk-session={}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={}",
-                session.session_id, SESSION_TTL_SECS
-            );
-            (
-                AppendHeaders([(SET_COOKIE, cookie_value)]),
-                Redirect::to("/"),
-            )
-                .into_response()
+            return render!(crate::web::Exchange {
+                session_token: session.session_id,
+                expires_in: SESSION_TTL_SECS
+            });
         }
         "/logout" => {
             let Some(session) = session else {
@@ -306,18 +332,17 @@ pub async fn middleware(
                 Ok(b) => b,
                 Err(err) => fail_html!(?err, "failed to read request body"),
             };
-            let form: std::collections::HashMap<String, String> =
-                match serde_urlencoded::from_bytes(&body) {
-                    Ok(f) => f,
-                    Err(err) => fail_html!(?err, "failed to parse form data"),
-                };
+            #[derive(serde::Deserialize)]
+            struct LogoutRequest {
+                csrf_token: String,
+            }
 
-            let csrf_valid = form
-                .get("csrf_token")
-                .map(|t| t == &session.csrf_token)
-                .unwrap_or(false);
+            let req: LogoutRequest = match serde_json::from_slice(&body) {
+                Ok(r) => r,
+                Err(err) => fail_html!(?err, "failed to parse json body"),
+            };
 
-            if !csrf_valid {
+            if !(req.csrf_token == session.csrf_token) {
                 return (axum::http::StatusCode::FORBIDDEN, "invalid csrf token").into_response();
             }
 
@@ -332,7 +357,7 @@ pub async fn middleware(
             )
                 .into_response()
         }
-        "/cancel" | "/validate-token" | "/checkout" => {
+        "/cancel" | "/validate-token" | "/checkout" | "/subscriptions" => {
             if let Some(ref session) = session {
                 let response = next.run(request).await;
                 refresh_session_cookie(session, response)
