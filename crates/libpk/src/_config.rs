@@ -33,6 +33,8 @@ pub struct DiscordConfig {
 
     #[serde(default)]
     pub gateway_target: Option<String>,
+    #[serde(default)]
+    pub interactions_target: Option<String>,
 
     #[serde(default)]
     pub gateway_proxy_url: Option<String>,
@@ -105,6 +107,15 @@ pub struct ScheduledTasksConfig {
     pub walg_s3_bucket: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct InteractionsConfig {
+    #[serde(default = "_default_api_addr")]
+    pub bind_addr: String,
+
+    #[serde(default)]
+    pub gateway_target: Option<String>,
+}
+
 fn _metrics_default() -> bool {
     false
 }
@@ -124,6 +135,8 @@ pub struct PKConfig {
     avatars: Option<AvatarsConfig>,
     #[serde(default)]
     pub scheduled_tasks: Option<ScheduledTasksConfig>,
+    #[serde(default)]
+    interactions: Option<InteractionsConfig>,
 
     #[serde(default = "_metrics_default")]
     pub run_metrics_server: bool,
@@ -160,6 +173,12 @@ impl PKConfig {
         self.scheduled_tasks
             .as_ref()
             .expect("missing scheduled_tasks config")
+    }
+
+    pub fn interactions(&self) -> &InteractionsConfig {
+        self.interactions
+            .as_ref()
+            .expect("missing interactions config")
     }
 }
 

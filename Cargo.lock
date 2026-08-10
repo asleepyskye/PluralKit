@@ -1901,6 +1901,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "interactions"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum 0.8.4",
+ "fred",
+ "futures",
+ "libpk",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "twilight-http",
+ "twilight-model",
+ "twilight-util",
+]
+
+[[package]]
 name = "io-uring"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -144,9 +144,13 @@ async fn main() -> anyhow::Result<()> {
             );
 
             while let Some((shard_id, parsed_event, raw_event)) = event_rx.recv().await {
+                let is_interaction =
+                    matches!(parsed_event, twilight_gateway::Event::InteractionCreate(_));
                 let target = if let Some(target) = awaiter.target_for_event(parsed_event).await {
                     info!(target = ?target, "sending event to awaiter");
                     Some(target)
+                } else if is_interaction {
+                    Some(libpk::config.discord().interactions_target.clone().unwrap())
                 } else if let Some(target) =
                     runtime_config.get(RUNTIME_CONFIG_KEY_EVENT_TARGET).await
                 {
